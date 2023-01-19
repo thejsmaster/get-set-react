@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default class ActionStore {
+export class ActionStore {
   subscriptions = [];
   clearTimeOut = null;
   version = 0;
@@ -131,7 +131,7 @@ function updateComponent(label: string, throttle: number = 50) {
   }
 }
 
-export const useSubscribe = function (...props: any) {
+const useGetSet = function (...props: any) {
   const [refresh, setRefresh] = useState(0);
   const [uniqueCode] = useState(getRandom(8));
   props
@@ -154,3 +154,5 @@ export const useSubscribe = function (...props: any) {
     };
   }, [refresh]);
 };
+
+export default useGetSet;

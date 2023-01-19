@@ -17,7 +17,7 @@ var ActionStore = /** @class */ (function () {
     }
     return ActionStore;
 }());
-export default ActionStore;
+export { ActionStore };
 function getSetJS(obj) {
     if (obj !== null &&
         obj !== undefined &&
@@ -113,7 +113,7 @@ function updateComponent(label, throttle) {
         }, throttle);
     }
 }
-export var useSubscribe = function () {
+var useGetSet = function () {
     var props = [];
     for (var _i = 0; _i < arguments.length; _i++) {
         props[_i] = arguments[_i];
@@ -140,3 +140,4 @@ export var useSubscribe = function () {
         };
     }, [refresh]);
 };
+export default useGetSet;
