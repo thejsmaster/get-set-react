@@ -1,6 +1,6 @@
 {
   "name": "get-set-react",
-  "version": "1.0.10",
+  "version": "1.0.12",
   "description": "Smallest state management plugin for React",
   "main": "index.js",
   "scripts": {
@@ -13,10 +13,11 @@
   },
   "keywords": [
     "react",
-    "statemanagement",
+    "state management",
     "redux",
     "mobx",
-    "alternative"
+    "get-set-react",
+    "get set react"
   ],
   "author": "sean freeman",
   "license": "ISC",
