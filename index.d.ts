@@ -10,5 +10,4 @@ export declare let updateAll: () => void;
 export declare let unSubscribe: (obj: any, label: any) => void;
 export declare let stateChanged: (state: any, throttle: number, updateSiblings: any) => void;
 export declare const getRandom: (length: number) => string;
-declare const useGetSet: (...props: any) => void;
-export default useGetSet;
+export declare const useGetSet: (...props: any) => void;

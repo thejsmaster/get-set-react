@@ -20,6 +20,11 @@ function getSetJS<T>(obj: T | any) {
     ].filter((key) => key.startsWith("set"));
     console.log(keys);
     keys.forEach((key) => {
+      if (hasTimer(obj[key])) {
+        console.error(
+          "timers not allowed inside set methods. move timers outside the state. get-set-react set methods don't support setTimeout or setInterval timers."
+        );
+      }
       if (
         typeof obj[key] === "function" &&
         obj[key].constructor.name === "Function"
@@ -36,15 +41,31 @@ function getSetJS<T>(obj: T | any) {
         typeof obj[key] === "function" &&
         obj[key].constructor.name === "GeneratorFunction"
       ) {
-        // TODO: need to implement for generator functions
+        console.error("get-set-react does not support generator functions. ");
       } else if (
         typeof obj[key] === "function" &&
         obj[key].constructor.name === "AsyncFunction"
       ) {
-        console.error(
-          "async methods are not allowed for getSetJS state classes ",
-          obj
-        );
+        let retv: any;
+        let orginalMethod = obj[key];
+        let clear = setInterval(() => {
+          update(obj);
+        }, 500);
+        let temp = async function (...props: any) {
+          try {
+            retv = await orginalMethod.call(obj, ...props);
+          } catch (e) {
+            console.error("error occured in this async function.");
+            return retv;
+          } finally {
+            if (clear) {
+              update(obj);
+              clearInterval(clear);
+            }
+          }
+          return retv;
+        };
+        obj[key] = temp;
       }
     });
     obj.__ = new ActionStore();
@@ -123,15 +144,17 @@ function updateComponent(label: string, throttle: number = 50) {
     subscriptions[label] &&
     typeof subscriptions[label] == "object" &&
     subscriptions[label].action &&
-    !subscriptions[label].clearTimeOut
+    !subscriptions[label].updateRequested
   ) {
-    subscriptions[label].clearTimeOut = window.setTimeout(() => {
+    subscriptions[label].updateRequested = true;
+    window.setTimeout(() => {
       subscriptions[label]?.action && subscriptions[label].action();
+      subscriptions[label].updateRequested = false;
     }, throttle);
   }
 }
 
-const useGetSet = function (...props: any) {
+export const useGetSet = function (...props: any) {
   const [refresh, setRefresh] = useState(0);
   const [uniqueCode] = useState(getRandom(8));
   props
@@ -142,7 +165,7 @@ const useGetSet = function (...props: any) {
   useEffect(() => {
     subscriptions[uniqueCode] = {
       action: () => setRefresh(refresh + 1),
-      clearTimeOut: null,
+      updateRequested: false,
     };
     [...props].forEach((item) => {
       item && subScribe(item, () => updateComponent(uniqueCode), uniqueCode);
@@ -152,7 +175,14 @@ const useGetSet = function (...props: any) {
       [...props].forEach((item) => item && unSubscribe(item, uniqueCode));
       subscriptions[uniqueCode] = null;
     };
-  }, [refresh]);
+  }, [refresh, props, uniqueCode]);
 };
 
-export default useGetSet;
+function hasTimer(fn: Function) {
+  return (
+    fn &&
+    typeof fn === "function" &&
+    (fn.toString().includes("setTimeout") ||
+      fn.toString().includes("setInterval"))
+  );
+}
