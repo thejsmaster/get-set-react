@@ -50,110 +50,170 @@ var ActionStore = /** @class */ (function () {
         this.clearTimeOut = null;
         this.version = 0;
         this.siblings = [];
+        this.onSetInProgress = false;
+        this.setList = [];
     }
     return ActionStore;
 }());
 export { ActionStore };
+var catchError = function (e, key) {
+    if (e === void 0) { e = ""; }
+    if (key === void 0) { key = ""; }
+    console.error("error occured in this function '" + key + " '. ", e);
+    throw new Error("error occured in '" + key + "' function : check console: " + e);
+    return;
+};
+var stateUpdateContext = null;
+var snapchats = {};
+export function copy(state) {
+    return state && JSON.parse(JSON.stringify(state));
+}
+export function saveCopy(state, label) {
+    state && label && (snapchats[label] = state);
+}
+export function getSavedCopy(label) {
+    return snapchats[label];
+}
 function getSetJS(obj) {
+    obj.__ = new ActionStore();
     if (obj !== null &&
         obj !== undefined &&
         typeof obj === "object" &&
-        !Array.isArray(obj)) {
-        var keys = __spreadArray(__spreadArray([], Object.keys(obj.__proto__), true), Object.keys(obj), true).filter(function (key) { return key.startsWith("set"); });
-        console.log(keys);
+        !Array.isArray(obj) &&
+        obj.set !== null &&
+        obj.set !== undefined &&
+        typeof obj.set === "object" &&
+        !Array.isArray(obj.set)) {
+        var keys = __spreadArray([], Object.keys(obj.set), true); //.filter((key) => key.startsWith("set"));
         keys.forEach(function (key) {
-            if (hasTimer(obj[key])) {
+            if (hasTimer(obj.set[key])) {
                 console.error("timers not allowed inside set methods. move timers outside the state. get-set-react set methods don't support setTimeout or setInterval timers.");
             }
-            if (typeof obj[key] === "function" &&
-                obj[key].constructor.name === "Function") {
-                var retv_1;
-                var orginalMethod_1 = obj[key];
-                var temp = function () {
+            if (typeof obj.set[key] === "function" &&
+                obj.set[key].constructor.name === "Function") {
+                var retv_1 = undefined;
+                var orginalMethod_1 = obj.set[key];
+                var temp_1 = function () {
                     var props = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
                         props[_i] = arguments[_i];
                     }
-                    retv_1 = orginalMethod_1.call.apply(orginalMethod_1, __spreadArray([obj], props, false));
-                    update(obj);
-                    return retv_1;
+                    try {
+                        retv_1 = orginalMethod_1.call.apply(orginalMethod_1, __spreadArray([obj], props, false));
+                        if (!obj.__.onSetInProgress) {
+                            update(obj);
+                            obj.__.setList.push(temp_1);
+                        }
+                    }
+                    catch (e) {
+                        catchError(e, key);
+                    }
+                    finally {
+                        return retv_1;
+                    }
                 };
-                obj[key] = temp;
+                obj.set[key] = temp_1;
             }
-            else if (typeof obj[key] === "function" &&
-                obj[key].constructor.name === "GeneratorFunction") {
-                console.error("get-set-react does not support generator functions. ");
+            else if (typeof obj.set[key] === "function" &&
+                obj.set[key].constructor.name === "GeneratorFunction") {
+                console.error("get-set-react does not support generator functions at this moment. ");
             }
-            else if (typeof obj[key] === "function" &&
-                obj[key].constructor.name === "AsyncFunction") {
+            else if (typeof obj.set[key] === "function" &&
+                obj.set[key].constructor.name === "AsyncFunction") {
                 var retv_2;
-                var orginalMethod_2 = obj[key];
-                var clear_1 = setInterval(function () {
-                    update(obj);
-                }, 500);
-                var temp = function () {
+                var orginalMethod_2 = obj.set[key];
+                var temp_2 = function () {
                     var props = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
                         props[_i] = arguments[_i];
                     }
                     return __awaiter(this, void 0, void 0, function () {
-                        var e_1;
+                        var clear, e_1;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
-                                    _a.trys.push([0, 2, 3, 4]);
-                                    return [4 /*yield*/, orginalMethod_2.call.apply(orginalMethod_2, __spreadArray([obj], props, false))];
+                                    clear = setInterval(function () {
+                                        !obj.__.onSetInProgress && update(obj);
+                                    }, 500);
+                                    _a.label = 1;
                                 case 1:
-                                    retv_2 = _a.sent();
-                                    return [3 /*break*/, 4];
+                                    _a.trys.push([1, 3, 4, 5]);
+                                    return [4 /*yield*/, orginalMethod_2.call.apply(orginalMethod_2, __spreadArray([obj], props, false))];
                                 case 2:
-                                    e_1 = _a.sent();
-                                    console.error("error occured in this async function.");
-                                    return [2 /*return*/, retv_2];
+                                    retv_2 = _a.sent();
+                                    return [3 /*break*/, 5];
                                 case 3:
-                                    if (clear_1) {
-                                        update(obj);
-                                        clearInterval(clear_1);
+                                    e_1 = _a.sent();
+                                    catchError(e_1, key);
+                                    return [3 /*break*/, 5];
+                                case 4:
+                                    if (clear) {
+                                        if (!obj.__.onSetInProgress) {
+                                            update(obj);
+                                            obj.__.setList.push(temp_2);
+                                        }
+                                        clearInterval(clear);
                                     }
                                     return [7 /*endfinally*/];
-                                case 4: return [2 /*return*/, retv_2];
+                                case 5: return [2 /*return*/, retv_2];
                             }
                         });
                     });
                 };
-                obj[key] = temp;
+                obj.set[key] = temp_2;
             }
         });
-        obj.__ = new ActionStore();
     }
 }
-//c.set_increment();
-//console.log(counter.async_fetchUsers.constructor.name);
-// function stateChanged(obj) {
-//   console.log("state changed for ", obj);
-// }
 export var subScribe = function (obj, func, label) {
     var subscription = obj.__.subscriptions.find(function (d) { return d.label === label; });
     if (!subscription) {
         obj.__.subscriptions.push({ label: label, action: func });
     }
 };
-export var update = function (obj, 
-// method?: any,
-throttle, updateSiblings) {
-    //method && method.apply(obj, props);
+var update = function (obj, throttle, updateSiblings) {
     if (throttle === void 0) { throttle = 50; }
     if (updateSiblings === void 0) { updateSiblings = false; }
-    (obj === null || obj === void 0 ? void 0 : obj.onChange) && obj.onChange();
     obj && stateChanged(obj, throttle, updateSiblings);
 };
 export var updateAll = function () { };
 export var unSubscribe = function (obj, label) {
     obj.__.subscriptions = obj.__.subscriptions.filter(function (d) { return d.label !== label; });
 };
+export var setEffect = function (fn, deps) {
+    if (!stateUpdateContext ||
+        !stateUpdateContext.__ ||
+        !stateUpdateContext.__.setList) {
+        console.error("something went wrong");
+        return;
+    }
+    else {
+        if (deps.length === 0 ||
+            deps.find(function (dep) {
+                return Object.keys(stateUpdateContext.__.setList).find(function (key) { return stateUpdateContext.__.setList[key] === dep; });
+            })) {
+            fn && fn();
+        }
+    }
+};
 export var stateChanged = function (state, throttle, updateSiblings) {
     if (!state.__.clearTimeOut) {
         state.__.clearTimeOut = window.setTimeout(function () {
+            if (state.onSet) {
+                state.__.onSetInProgress = true;
+                stateUpdateContext = state;
+                try {
+                    state.onSet();
+                }
+                catch (e) {
+                    console.error("error in onSet", e);
+                }
+                finally {
+                    state.__.setList = [];
+                    state.__.onSetInProgress = false;
+                    stateUpdateContext = null;
+                }
+            }
             var subScriptions = [];
             if (!updateSiblings)
                 subScriptions = state.__.subscriptions;
@@ -176,7 +236,6 @@ export var getRandom = function (length) {
 var subscriptions = {};
 function updateComponent(label, throttle) {
     if (throttle === void 0) { throttle = 50; }
-    console.log(subscriptions);
     if (subscriptions[label] &&
         typeof subscriptions[label] == "object" &&
         subscriptions[label].action &&
@@ -189,11 +248,7 @@ function updateComponent(label, throttle) {
         }, throttle);
     }
 }
-export var useGetSet = function () {
-    var props = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        props[_i] = arguments[_i];
-    }
+export var useGetSet = function (props) {
     var _a = useState(0), refresh = _a[0], setRefresh = _a[1];
     var uniqueCode = useState(getRandom(8))[0];
     props

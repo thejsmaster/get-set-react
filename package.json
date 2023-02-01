@@ -1,6 +1,6 @@
 {
   "name": "get-set-react",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Smallest state management plugin for React",
   "main": "index.js",
   "scripts": {
