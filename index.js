@@ -1,39 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
-    function verb(n) { return function (v) { return step([n, v]); }; }
-    function step(op) {
-        if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
-            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [op[0] & 2, t.value];
-            switch (op[0]) {
-                case 0: case 1: t = op; break;
-                case 4: _.label++; return { value: op[1], done: false };
-                case 5: _.label++; y = op[1]; op = [0]; continue;
-                case 7: op = _.ops.pop(); _.trys.pop(); continue;
-                default:
-                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
-                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
-                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
-                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
-                    if (t[2]) _.ops.pop();
-                    _.trys.pop(); continue;
-            }
-            op = body.call(thisArg, _);
-        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
-        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
-    }
-};
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -52,10 +16,18 @@ var ActionStore = /** @class */ (function () {
         this.siblings = [];
         this.onSetInProgress = false;
         this.setList = [];
+        this.asyncClearInterval = null;
+        this.asyncCount = 0;
+        this.deps = [];
+        this.onChangeCount = -1;
+        this.onSetCalledCount = 0;
     }
     return ActionStore;
 }());
 export { ActionStore };
+var timersFoundError = "timers not allowed inside set methods. move timers into other method that's name does not start with 'set'.";
+var generatorsFound = "get-set-react does not support generator functions at this moment. ";
+var asyncSetFound = "methods start with 'set' can not be async functions. ";
 var catchError = function (e, key) {
     if (e === void 0) { e = ""; }
     if (key === void 0) { key = ""; }
@@ -84,10 +56,10 @@ function getSetJS(obj) {
         obj.set !== undefined &&
         typeof obj.set === "object" &&
         !Array.isArray(obj.set)) {
-        var keys = __spreadArray([], Object.keys(obj.set), true); //.filter((key) => key.startsWith("set"));
+        var keys = __spreadArray([], Object.keys(obj.set), true);
         keys.forEach(function (key) {
             if (hasTimer(obj.set[key])) {
-                console.error("timers not allowed inside set methods. move timers outside the state. get-set-react set methods don't support setTimeout or setInterval timers.");
+                console.error();
             }
             if (typeof obj.set[key] === "function" &&
                 obj.set[key].constructor.name === "Function") {
@@ -116,51 +88,56 @@ function getSetJS(obj) {
             }
             else if (typeof obj.set[key] === "function" &&
                 obj.set[key].constructor.name === "GeneratorFunction") {
-                console.error("get-set-react does not support generator functions at this moment. ");
+                console.error(generatorsFound);
             }
             else if (typeof obj.set[key] === "function" &&
                 obj.set[key].constructor.name === "AsyncFunction") {
-                var retv_2;
-                var orginalMethod_2 = obj.set[key];
+                console.error(asyncSetFound);
+            }
+        });
+    }
+    else if (obj !== null &&
+        obj !== undefined &&
+        typeof obj === "object" &&
+        !Array.isArray(obj) &&
+        typeof obj.set !== "object") {
+        var keys = __spreadArray(__spreadArray([], Object.keys(obj.__proto__), true), Object.keys(obj), true).filter(function (key) { return key.toLowerCase().startsWith("set"); });
+        keys.forEach(function (key) {
+            if (hasTimer(obj[key])) {
+                console.error(timersFoundError);
+            }
+            if (typeof obj[key] === "function" &&
+                obj[key].constructor.name === "Function") {
+                var retv_2 = undefined;
+                var orginalMethod_2 = obj[key];
                 var temp_2 = function () {
                     var props = [];
                     for (var _i = 0; _i < arguments.length; _i++) {
                         props[_i] = arguments[_i];
                     }
-                    return __awaiter(this, void 0, void 0, function () {
-                        var clear, e_1;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    clear = setInterval(function () {
-                                        !obj.__.onSetInProgress && update(obj);
-                                    }, 500);
-                                    _a.label = 1;
-                                case 1:
-                                    _a.trys.push([1, 3, 4, 5]);
-                                    return [4 /*yield*/, orginalMethod_2.call.apply(orginalMethod_2, __spreadArray([obj], props, false))];
-                                case 2:
-                                    retv_2 = _a.sent();
-                                    return [3 /*break*/, 5];
-                                case 3:
-                                    e_1 = _a.sent();
-                                    catchError(e_1, key);
-                                    return [3 /*break*/, 5];
-                                case 4:
-                                    if (clear) {
-                                        if (!obj.__.onSetInProgress) {
-                                            update(obj);
-                                            obj.__.setList.push(temp_2);
-                                        }
-                                        clearInterval(clear);
-                                    }
-                                    return [7 /*endfinally*/];
-                                case 5: return [2 /*return*/, retv_2];
-                            }
-                        });
-                    });
+                    try {
+                        retv_2 = orginalMethod_2.call.apply(orginalMethod_2, __spreadArray([obj], props, false));
+                        if (!obj.__.onSetInProgress) {
+                            update(obj);
+                            obj.__.setList.push(temp_2);
+                        }
+                    }
+                    catch (e) {
+                        catchError(e, key);
+                    }
+                    finally {
+                        return retv_2;
+                    }
                 };
-                obj.set[key] = temp_2;
+                obj[key] = temp_2;
+            }
+            else if (typeof obj[key] === "function" &&
+                obj[key].constructor.name === "GeneratorFunction") {
+                console.error(generatorsFound);
+            }
+            else if (typeof obj[key] === "function" &&
+                obj[key].constructor.name === "AsyncFunction") {
+                console.error(asyncSetFound);
             }
         });
     }
@@ -180,33 +157,78 @@ export var updateAll = function () { };
 export var unSubscribe = function (obj, label) {
     obj.__.subscriptions = obj.__.subscriptions.filter(function (d) { return d.label !== label; });
 };
-export var setEffect = function (fn, deps) {
-    if (!stateUpdateContext ||
-        !stateUpdateContext.__ ||
-        !stateUpdateContext.__.setList) {
-        console.error("something went wrong");
-        return;
-    }
-    else {
-        if (deps.length === 0 ||
-            deps.find(function (dep) {
-                return Object.keys(stateUpdateContext.__.setList).find(function (key) { return stateUpdateContext.__.setList[key] === dep; });
-            })) {
-            fn && fn();
+export var setMemo = function (fn, deps) {
+    // set methods;
+    if (fn && typeof fn === "function") {
+        if (fn.constructor.name === "AsyncFunction") {
+            throw Error("async functions can not be passed to setEffect or setMemo.");
+        }
+        if (!stateUpdateContext ||
+            !stateUpdateContext.__ ||
+            !stateUpdateContext.__.setList) {
+            console.error("something went wrong");
+            return;
+        }
+        else {
+            if (deps.length === 0 ||
+                deps.find(function (dep) {
+                    return Object.keys(stateUpdateContext.__.setList).find(function (key) { return stateUpdateContext.__.setList[key] === dep; });
+                })) {
+                fn && fn();
+            }
         }
     }
 };
+export var onChange = function (fn, deps) {
+    try {
+        if (fn && typeof fn === "function") {
+            if (fn.constructor.name === "AsyncFunction") {
+                throw Error("async functions can not be passed to setEffect or setMemo.");
+            }
+            else if (!stateUpdateContext ||
+                !stateUpdateContext.__ ||
+                !stateUpdateContext.__.deps) {
+                console.error("something went wrong in onSet/onChange");
+                return;
+            }
+            else {
+                stateUpdateContext.__.onChangeCount++;
+                if (stateUpdateContext.__.onSetCalledCount === 0 ||
+                    !deepEqual(deps, stateUpdateContext.__.deps[stateUpdateContext.__.onChangeCount])) {
+                    // on set called before
+                    try {
+                        fn && fn();
+                    }
+                    catch (e) {
+                        console.error("error occured inside the function passed to onchange.  ", fn.toString());
+                    }
+                    stateUpdateContext.__.deps[stateUpdateContext.__.onChangeCount] =
+                        JSON.parse(JSON.stringify(deps));
+                }
+            }
+        }
+    }
+    catch (e) {
+        console.error("error occured in onChange");
+    }
+};
+export var setEffect = onChange;
 export var stateChanged = function (state, throttle, updateSiblings) {
     if (!state.__.clearTimeOut) {
         state.__.clearTimeOut = window.setTimeout(function () {
-            if (state.onSet) {
+            if (state.onSet && typeof state.onSet === "function") {
+                if (state.onSet.constructor.name === "AsyncFunction") {
+                    throw Error("onSet functions can not be async.");
+                }
                 state.__.onSetInProgress = true;
                 stateUpdateContext = state;
                 try {
+                    state.__.onChangeCount = -1;
                     state.onSet();
+                    state.__.onSetCalledCount++;
                 }
                 catch (e) {
-                    console.error("error in onSet", e);
+                    console.error("error occured in onSet", e);
                 }
                 finally {
                     state.__.setList = [];
@@ -251,6 +273,10 @@ function updateComponent(label, throttle) {
 export var useGetSet = function (props) {
     var _a = useState(0), refresh = _a[0], setRefresh = _a[1];
     var uniqueCode = useState(getRandom(8))[0];
+    if (props.find(function (item) { return !item || typeof item !== "object" || Array.isArray(item); })) {
+        console.error("one or more states passed to useGetSet is not a valid object. ", props);
+        new TypeError("one or more states passed to useGetSet is not a valid object. ");
+    }
     props
         .filter(function (state) { return state && !state.__; })
         .forEach(function (state) {
@@ -270,10 +296,45 @@ export var useGetSet = function (props) {
             subscriptions[uniqueCode] = null;
         };
     }, [refresh, props, uniqueCode]);
+    return [refresh];
 };
 function hasTimer(fn) {
     return (fn &&
         typeof fn === "function" &&
-        (fn.toString().includes("setTimeout") ||
-            fn.toString().includes("setInterval")));
+        (fn.toString().includes("setTimeout(") ||
+            fn.toString().includes("setInterval(")));
+}
+function deepEqual(a, b) {
+    if (a === b) {
+        return true;
+    }
+    if (Array.isArray(a) && Array.isArray(b)) {
+        if (a.length !== b.length) {
+            return false;
+        }
+        for (var i = 0; i < a.length; i++) {
+            if (!deepEqual(a[i], b[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    if (typeof a !== "object" ||
+        a === null ||
+        typeof b !== "object" ||
+        b === null) {
+        return false;
+    }
+    var keysA = Object.keys(a);
+    var keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) {
+        return false;
+    }
+    for (var _i = 0, keysA_1 = keysA; _i < keysA_1.length; _i++) {
+        var key = keysA_1[_i];
+        if (!keysB.includes(key) || !deepEqual(a[key], b[key])) {
+            return false;
+        }
+    }
+    return true;
 }
